@@ -1,0 +1,64 @@
+#!/bin/bash
+
+set -euo pipefail # STRICT MODE
+IFS=$'\n\t'       # http://redsymbol.net/articles/unofficial-bash-strict-mode/
+
+# Takes two arguments – a GitHub repository name and a PR number
+# It ensures the PR is unmerged, fast-forwardable, and has a file named
+# “CHANGELOG/{major|minor|revision}.md” (the name is used to determine which
+# version component to increment).
+#
+# It increments the version, renames the CHANGELOG file to the new version, and
+# merges into master.
+#
+# Depends on: curl, json (http://trentm.com/json/#INSTALL-PROJECT-BUGS)
+
+repo=${1:-}
+pull_request=${2:-}
+if [[ -z "$repo" || -z "$pull_request" ]]; then
+    echo "usage: $0 REPO PR"
+    exit 1
+fi
+
+pr_url="https://api.github.com/repos/${repo}/pulls/${pull_request}"
+
+directory=$(mktemp -d "/tmp/slamdata-merge.XXXXXXXX")
+
+# FIXME: removed -e around this command, don’t know why I had to
+set +e
+read -d '' merged base_clone pr_clone submitter base_ref pr_ref \
+     < <(curl -f -s $pr_url | /usr/local/bin/json merged base.repo.clone_url head.repo.clone_url user.login base.ref head.ref)
+set -e
+
+if [[ "$merged" == "false" ]]; then
+    tmp_branch=${submitter}-${pr_ref}
+
+    git clone $base_clone $directory
+    cd $directory
+    git checkout -b $tmp_branch $base_ref
+    git pull --ff-only $pr_clone $pr_ref
+    old_version=($(sed 's/.*"\(.*\)"/\1/' version.sbt | tr "." "\n"))
+    if [[ -e "CHANGELOG/major.md" ]]; then
+        new_version="$((old_version[0] + 1)).0.0"
+        git mv CHANGELOG/major.md CHANGELOG/${new_version}.md
+    elif [[ -e "CHANGELOG/minor.md" ]]; then
+        new_version="${old_version[0]}.$((old_version[1] + 1)).0"
+        git mv CHANGELOG/minor.md CHANGELOG/${new_version}.md
+    elif [[ -e "CHANGELOG/revision.md" ]]; then
+        new_version="${old_version[0]}.${old_version[1]}.$((old_version[2] + 1))"
+        git mv CHANGELOG/revision.md CHANGELOG/${new_version}.md
+    else
+        echo "error: Missing an incremental CHANGELOG file."
+        exit 1
+    fi
+    echo "version in ThisBuild := \"${new_version}\"" >version.sbt
+    git commit -a --amend --no-edit
+    git checkout $base_ref
+    git merge --no-ff --no-edit $tmp_branch
+    git push origin $base_ref
+    rm -rf $directory
+    echo "success: ${repo}#${pull_request} has version ${new_version} in ${base_ref}"
+else
+    echo "error: ${repo}#${pull_request} has already been merged"
+    exit 1
+fi
