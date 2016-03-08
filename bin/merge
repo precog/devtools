@@ -54,7 +54,7 @@ if [[ "$merged" == "false" ]]; then
     echo "version in ThisBuild := \"${new_version}\"" >version.sbt
     git commit -a --amend --no-edit
     git checkout $base_ref
-    git merge --no-ff --no-edit $tmp_branch
+    git merge --no-ff -m "$(printf "Merge branch '%s'\n\nCloses #%s." "$pr_ref" "$pull_request")" $tmp_branch
     git push origin $base_ref
     rm -rf $directory
     echo "success: ${repo}#${pull_request} has version ${new_version} in ${base_ref}"
