@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -euo pipefail # STRICT MODE
 IFS=$'\n\t'       # http://redsymbol.net/articles/unofficial-bash-strict-mode/
@@ -27,7 +27,7 @@ directory=$(mktemp -d "/tmp/slamdata-merge.XXXXXXXX")
 # FIXME: removed -e around this command, don’t know why I had to
 set +e
 read -d '' merged base_clone pr_clone submitter base_ref pr_ref \
-     < <(curl -f -s $pr_url | /usr/local/bin/json merged base.repo.clone_url head.repo.clone_url user.login base.ref head.ref)
+     < <(curl -f -s $pr_url | json merged base.repo.clone_url head.repo.clone_url user.login base.ref head.ref)
 set -e
 
 if [[ "$merged" == "false" ]]; then
@@ -54,7 +54,7 @@ if [[ "$merged" == "false" ]]; then
     echo "version in ThisBuild := \"${new_version}\"" >version.sbt
     git commit -a --amend --no-edit
     git checkout $base_ref
-    git merge --no-ff --no-edit $tmp_branch
+    git merge --no-ff -m "$(printf "Merge branch '%s'\n\nCloses #%s." "$pr_ref" "$pull_request")" $tmp_branch
     git push origin $base_ref
     rm -rf $directory
     echo "success: ${repo}#${pull_request} has version ${new_version} in ${base_ref}"
