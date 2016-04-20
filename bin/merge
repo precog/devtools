@@ -5,8 +5,16 @@ IFS=$'\n\t'       # http://redsymbol.net/articles/unofficial-bash-strict-mode/
 
 # Takes two arguments – a GitHub repository name and a PR number
 # It ensures the PR is unmerged, fast-forwardable, and has a file named
-# “CHANGELOG/{major|minor|revision}.md” (the name is used to determine which
+# “CHANGELOG/{breaking|feature|bugfix}.md” (the name is used to determine which
 # version component to increment).
+#
+# Pre-1.0 projects are supported (i.e. those with a version of 0.x.y) and breaking
+# changes will result in the minor version being incremented and any other change
+# will increment the patch version.
+#
+# When the pre-1.0 API has reached stability and is ready to release,
+# include a `release.md` in CHANGELOG which will transition the version to
+# 1.0.0.
 #
 # It increments the version, renames the CHANGELOG file to the new version, and
 # merges into master.
@@ -15,14 +23,19 @@ IFS=$'\n\t'       # http://redsymbol.net/articles/unofficial-bash-strict-mode/
 
 repo=${1:-}
 pull_request=${2:-}
+
 if [[ -z "$repo" || -z "$pull_request" ]]; then
     echo "usage: $0 REPO PR"
     exit 1
 fi
 
 pr_url="https://api.github.com/repos/${repo}/pulls/${pull_request}"
-
 directory=$(mktemp -d "/tmp/slamdata-merge.XXXXXXXX")
+
+breaking="CHANGELOG/breaking.md"
+feature="CHANGELOG/feature.md"
+bugfix="CHANGELOG/bugfix.md"
+release="CHANGELOG/release.md"
 
 # FIXME: removed -e around this command, don’t know why I had to
 set +e
@@ -37,26 +50,46 @@ if [[ "$merged" == "false" ]]; then
     cd $directory
     git checkout -b $tmp_branch $base_ref
     git pull --ff-only $pr_clone $pr_ref
+
     old_version=($(sed 's/.*"\(.*\)"/\1/' version.sbt | tr "." "\n"))
-    if [[ -e "CHANGELOG/major.md" ]]; then
-        new_version="$((old_version[0] + 1)).0.0"
-        git mv CHANGELOG/major.md CHANGELOG/${new_version}.md
-    elif [[ -e "CHANGELOG/minor.md" ]]; then
-        new_version="${old_version[0]}.$((old_version[1] + 1)).0"
-        git mv CHANGELOG/minor.md CHANGELOG/${new_version}.md
-    elif [[ -e "CHANGELOG/revision.md" ]]; then
+
+    if [[ -e "$breaking" ]]; then
+        if [[ "${old_version[0]}" == "0" ]]; then
+            new_version="0.$((old_version[1] + 1)).0"
+        else
+            new_version="$((old_version[0] + 1)).0.0"
+        fi
+        git mv "$breaking" CHANGELOG/${new_version}.md
+    elif [[ -e "$feature" ]]; then
+        if [[ "${old_version[0]}" == "0" ]]; then
+            new_version="0.${old_version[1]}.$((old_version[2] + 1))"
+        else
+            new_version="${old_version[0]}.$((old_version[1] + 1)).0"
+        fi
+        git mv "$feature" CHANGELOG/${new_version}.md
+    elif [[ -e "$bugfix" ]]; then
         new_version="${old_version[0]}.${old_version[1]}.$((old_version[2] + 1))"
-        git mv CHANGELOG/revision.md CHANGELOG/${new_version}.md
+        git mv "$bugfix" CHANGELOG/${new_version}.md
+    elif [[ -e "$release" ]]; then
+      if [[ "${old_version[0]}" == "0" ]]; then
+          git mv "$release" CHANGELOG/1.0.0.md
+      else
+          echo "error: Current version (${old_version[0]}.${old_version[1]}.${old_version[2]}) must be < 1.0.0 to release."
+          exit 1
+      fi
     else
-        echo "error: Missing an incremental CHANGELOG file."
+        echo "error: Missing a semantic CHANGELOG file."
         exit 1
     fi
-    echo "version in ThisBuild := \"${new_version}\"" >version.sbt
+
+    echo "version in ThisBuild := \"${new_version}\"" > version.sbt
+
     git commit -a --amend --no-edit
     git checkout $base_ref
     git merge --no-ff -m "$(printf "Merge branch '%s'\n\nCloses #%s." "$pr_ref" "$pull_request")" $tmp_branch
     git push origin $base_ref
     rm -rf $directory
+
     echo "success: ${repo}#${pull_request} has version ${new_version} in ${base_ref}"
 else
     echo "error: ${repo}#${pull_request} has already been merged"
