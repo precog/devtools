@@ -8,13 +8,12 @@ IFS=$'\n\t'       # http://redsymbol.net/articles/unofficial-bash-strict-mode/
 # “CHANGELOG/{breaking|feature|bugfix}.md” (the name is used to determine which
 # version component to increment).
 #
-# Pre-1.0 projects are supported (i.e. those with a version of 0.x.y) and breaking
-# changes will result in the minor version being incremented and any other change
-# will increment the patch version.
+# Pre-1.0 projects are supported (i.e. those with a version of 0.x.y) and
+# breaking changes will result in the minor version being incremented and any
+# other change will increment the patch version.
 #
-# When the pre-1.0 API has reached stability and is ready to release,
-# include a `release.md` in CHANGELOG which will transition the version to
-# 1.0.0.
+# When the pre-1.0 API has reached stability and is ready to release, include a
+# `release.md` in CHANGELOG which will transition the version to 1.0.0.
 #
 # It increments the version, renames the CHANGELOG file to the new version, and
 # merges into master.
@@ -39,8 +38,8 @@ release="CHANGELOG/release.md"
 
 # FIXME: removed -e around this command, don’t know why I had to
 set +e
-read -d '' merged base_clone pr_clone submitter base_ref pr_ref \
-     < <(curl -f -s $pr_url | json merged base.repo.clone_url head.repo.clone_url user.login base.ref head.ref)
+read -d '' merged base_clone pr_clone submitter base_sha base_ref pr_ref \
+     < <(curl -f -s $pr_url | json merged base.repo.ssh_url head.repo.ssh_url user.login base.sha base.ref head.ref)
 set -e
 
 if [[ "$merged" == "false" ]]; then
@@ -48,7 +47,7 @@ if [[ "$merged" == "false" ]]; then
 
     git clone $base_clone $directory
     cd $directory
-    git checkout -b $tmp_branch $base_ref
+    git checkout -b $tmp_branch $base_sha
     git pull --ff-only $pr_clone $pr_ref
 
     old_version=($(sed 's/.*"\(.*\)"/\1/' version.sbt | tr "." "\n"))
