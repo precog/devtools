@@ -5,7 +5,7 @@ IFS=$'\n\t'       # http://redsymbol.net/articles/unofficial-bash-strict-mode/
 
 # Takes two arguments – a GitHub repository name and a PR number
 # It ensures the PR is unmerged, fast-forwardable, and has a file named
-# “CHANGELOG/{breaking|feature|bugfix}.md” (the name is used to determine which
+# “CHANGELOG/{breaking|feature|revision}.md” (the name is used to determine which
 # version component to increment).
 #
 # Pre-1.0 projects are supported (i.e. those with a version of 0.x.y) and
@@ -33,7 +33,7 @@ directory=$(mktemp -d "/tmp/slamdata-merge.XXXXXXXX")
 
 breaking="CHANGELOG/breaking.md"
 feature="CHANGELOG/feature.md"
-bugfix="CHANGELOG/bugfix.md"
+revision="CHANGELOG/revision.md"
 release="CHANGELOG/release.md"
 
 # FIXME: removed -e around this command, don’t know why I had to
@@ -66,9 +66,9 @@ if [[ "$merged" == "false" ]]; then
             new_version="${old_version[0]}.$((old_version[1] + 1)).0"
         fi
         git mv "$feature" CHANGELOG/${new_version}.md
-    elif [[ -e "$bugfix" ]]; then
+    elif [[ -e "$revision" ]]; then
         new_version="${old_version[0]}.${old_version[1]}.$((old_version[2] + 1))"
-        git mv "$bugfix" CHANGELOG/${new_version}.md
+        git mv "$revision" CHANGELOG/${new_version}.md
     elif [[ -e "$release" ]]; then
       if [[ "${old_version[0]}" == "0" ]]; then
           git mv "$release" CHANGELOG/1.0.0.md
