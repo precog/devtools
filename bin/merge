@@ -49,6 +49,8 @@ if [[ "$merged" == "false" ]]; then
     cd $directory
     git checkout -b $tmp_branch $base_sha
     git pull --ff-only $pr_clone $pr_ref
+    git checkout $base_ref
+    git merge --ff-only -m "$(printf "Merge branch '%s'\n\nCloses #%s." "$pr_ref" "$pull_request")" $tmp_branch
 
     old_version=($(sed 's/.*"\(.*\)"/\1/' version.sbt | tr "." "\n"))
 
@@ -83,9 +85,7 @@ if [[ "$merged" == "false" ]]; then
 
     echo "version in ThisBuild := \"${new_version}\"" > version.sbt
 
-    git commit -a --amend --no-edit
-    git checkout $base_ref
-    git merge --no-ff -m "$(printf "Merge branch '%s'\n\nCloses #%s." "$pr_ref" "$pull_request")" $tmp_branch
+    git commit -a --amend --no-edit # amend the merge commit
     git push origin $base_ref
     rm -rf $directory
 
