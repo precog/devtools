@@ -51,21 +51,21 @@ if [[ "$merged" == "false" ]]; then
 
     old_version=($(sed 's/.*"\(.*\)"/\1/' version.sbt | tr "." "\n"))
 
-    if [[ $(echo ${labels[@]}) == *"breaking"* ]]; then
+    if [[ $(echo ${labels[@]}) == *"version: breaking"* ]]; then
         if [[ "${old_version[0]}" == "0" ]]; then
             new_version="0.$((old_version[1] + 1)).0"
         else
             new_version="$((old_version[0] + 1)).0.0"
         fi
-    elif [[ $(echo ${labels[@]}) == *"feature"* ]]; then
+    elif [[ $(echo ${labels[@]}) == *"version: feature"* ]]; then
         if [[ "${old_version[0]}" == "0" ]]; then
             new_version="0.${old_version[1]}.$((old_version[2] + 1))"
         else
             new_version="${old_version[0]}.$((old_version[1] + 1)).0"
         fi
-    elif [[ $(echo ${labels[@]}) == *"revision"* ]]; then
+    elif [[ $(echo ${labels[@]}) == *"version: revision"* ]]; then
         new_version="${old_version[0]}.${old_version[1]}.$((old_version[2] + 1))"
-    elif [[ $(echo ${labels[@]}) == *"release"* ]]; then
+    elif [[ $(echo ${labels[@]}) == *"version: release"* ]]; then
       if [[ "${old_version[0]}" == "0" ]]; then
           new_version="1.0.0"
       else
