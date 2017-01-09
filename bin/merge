@@ -4,19 +4,19 @@ set -euo pipefail # STRICT MODE
 IFS=$'\n\t'       # http://redsymbol.net/articles/unofficial-bash-strict-mode/
 
 # Takes two arguments – a GitHub repository name and a PR number
-# It ensures the PR is unmerged, fast-forwardable, and has a file named
-# “CHANGELOG/{breaking|feature|revision}.md” (the name is used to determine which
+# It ensures the PR is unmerged, fast-forwardable, and has a one of the
+# “version:” GitHub labels applied to it (the name is used to determine which
 # version component to increment).
 #
 # Pre-1.0 projects are supported (i.e. those with a version of 0.x.y) and
 # breaking changes will result in the minor version being incremented and any
 # other change will increment the patch version.
 #
-# When the pre-1.0 API has reached stability and is ready to release, include a
-# `release.md` in CHANGELOG which will transition the version to 1.0.0.
+# When the pre-1.0 API has reached stability and is ready to release, use the
+# “version: release” label, which will transition the version to 1.0.0.
 #
-# It increments the version, renames the CHANGELOG file to the new version, and
-# merges into master.
+# It increments the version, copies the PR title and description to the merge
+# commit, and merges into master.
 #
 # Depends on: curl, json (http://trentm.com/json/#INSTALL-PROJECT-BUGS)
 
@@ -35,9 +35,11 @@ directory=$(mktemp -d "/tmp/slamdata-merge.XXXXXXXX")
 # FIXME: removed -e around this command, don’t know why I had to
 set +e
 read -d '' merged title changelog base_clone pr_clone submitter base_sha base_ref pr_ref \
-     < <(curl -f -s $pr_url | json merged title body base.repo.ssh_url head.repo.ssh_url user.login base.sha base.ref head.ref)
+     < <(curl -f -s $pr_url | json merged title body base.repo.ssh_url head.repo.ssh_url user.login base.sha base.ref head.ref -e 'this.body = this.body.replace(/\r\n/g, "{{[[ENDL]]}}")')
 labels=$(curl -f -s $labels_url | json -a name)
 set -e
+
+changelog=${changelog//'{{[[ENDL]]}}'/$'\n'}
 
 if [[ "$merged" == "false" ]]; then
     tmp_branch=${submitter}-${pr_ref}
