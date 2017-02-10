@@ -35,7 +35,7 @@ directory=$(mktemp -d "/tmp/slamdata-merge.XXXXXXXX")
 # FIXME: removed -e around this command, don’t know why I had to
 set +e
 read -d '' merged title changelog base_clone pr_clone submitter base_sha base_ref pr_ref \
-     < <(curl -f -s $pr_url | json merged title body base.repo.ssh_url head.repo.ssh_url user.login base.sha base.ref head.ref -e 'this.body = this.body.replace(/\r\n/g, "{{[[ENDL]]}}")')
+     < <(curl -f -s $pr_url | json merged title body base.repo.ssh_url head.repo.ssh_url user.login base.sha base.ref head.ref -e 'this.body = (this.body || "").replace(/\r\n/g, "{{[[ENDL]]}}")')
 labels=$(curl -f -s $labels_url | json -a name)
 set -e
 
