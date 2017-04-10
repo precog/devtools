@@ -20,13 +20,15 @@ IFS=$'\n\t'       # http://redsymbol.net/articles/unofficial-bash-strict-mode/
 #
 # Depends on: curl, json (http://trentm.com/json/#INSTALL-PROJECT-BUGS)
 
-repo=${1:-}
-pull_request=${2:-}
+#repo=${1:-}
+#pull_request=${2:-}
 
-if [[ -z "$repo" || -z "$pull_request" ]]; then
-    echo "usage: $0 REPO PR"
-    exit 1
-fi
+#if [[ -z "$repo" || -z "$pull_request" ]]; then
+#    echo "usage: $0 REPO PR"
+#    exit 1
+#fi
+
+setup() {
 
 pr_url="https://api.github.com/repos/${repo}/pulls/${pull_request}"
 labels_url="https://api.github.com/repos/${repo}/issues/${pull_request}/labels"
@@ -40,6 +42,11 @@ labels=$(curl -f -s $labels_url | json -a name)
 set -e
 
 changelog=${changelog//'{{[[ENDL]]}}'/$'\n'}
+
+}
+
+
+mainwork() {
 
 if [[ "$merged" == "false" ]]; then
     tmp_branch=${submitter}-${pr_ref}
@@ -90,3 +97,59 @@ else
     echo "error: ${repo}#${pull_request} has already been merged"
     exit 1
 fi
+
+}
+
+usage() {
+
+cat << EOF
+Usage: $0 [-h] [-r "REPO-NAME PR-NUMBER"]
+Merge a cloned repo to REPO-NAME with PR-NUMBER. merge depends on json located
+here: http://trentm.com/json/ which can be installed using: sudo npm install -g json.
+Github keys should be exchanged before using $0. Instructions can be found here:
+https://help.github.com/articles/adding-a-new-ssh-key-to-your-github-account.
+Lastly, ensure PR has a version label assigned to it.
+
+  -h                        help (also trigged with no parameters): display this help and exit
+  -r "REPO-NAME PR-NUMBER"  use the -r flag pass in the name of the repo to merge to along with
+                            the pull request number separated by a space and in quotes
+
+Example: merge -r "quasar-analytics/quasar 2030"
+
+EOF
+
+}
+
+
+# if no args are passed in print usage
+[ $# -eq 0 ] && usage
+
+# command line parsing logic
+while getopts ":hr:" opt; do
+  case $opt in
+    r)
+      set -f
+      IFS=' '
+      array=($OPTARG)
+      repo=${array[0]}
+      pull_request=${array[1]}
+      setup
+      mainwork
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument of the form \"REPO-NAME PR-NUMBER\"" >&2
+      exit 1
+      ;;
+    h | *)
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+
+
