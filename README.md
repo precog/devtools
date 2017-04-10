@@ -22,7 +22,7 @@ NPM depends on [Node.js](https://nodejs.org).
 5. Now run the `merge` script as follows:
 
 ```
-→ merge <github-repo-name> <PR-number>
+→ merge -r "REPO-NAME PR-NUMBER"
 ```
 
-replacing `<github-repo-name>` by the name of a repository, for exapmle `quasar-analytics/quasar`.
+replacing `REPO-NAME` by the name of a repository, for exapmle `quasar-analytics/quasar`.
