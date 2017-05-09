@@ -20,14 +20,11 @@ IFS=$'\n\t'       # http://redsymbol.net/articles/unofficial-bash-strict-mode/
 #
 # Depends on: curl, json (http://trentm.com/json/#INSTALL-PROJECT-BUGS)
 
+
+mainwork() {
+
 repo=${1:-}
 pull_request=${2:-}
-
-if [[ -z "$repo" || -z "$pull_request" ]]; then
-    echo "usage: $0 REPO PR"
-    exit 1
-fi
-
 pr_url="https://api.github.com/repos/${repo}/pulls/${pull_request}"
 labels_url="https://api.github.com/repos/${repo}/issues/${pull_request}/labels"
 directory=$(mktemp -d "/tmp/slamdata-merge.XXXXXXXX")
@@ -90,3 +87,42 @@ else
     echo "error: ${repo}#${pull_request} has already been merged"
     exit 1
 fi
+
+}
+
+usage() {
+
+cat << EOF
+Usage: $0 [-h] <REPO-NAME> <PR-NUMBER>
+Merge a cloned repo to REPO-NAME with PR-NUMBER. Merge depends on json located
+here: http://trentm.com/json/ which can be installed using: sudo npm install -g json.
+Github keys should be exchanged before using $0. Instructions can be found here:
+https://help.github.com/articles/adding-a-new-ssh-key-to-your-github-account.
+Lastly, ensure PR has a version label assigned to it.
+
+  -h            help (also trigged with no parameters): display this help and exit
+  <REPO-NAME>   the repo name, for example: quasar-analytics/quasar
+  <PR-NUMBER>   the pull request number: 2030
+
+Example: merge quasar-analytics/quasar 2030
+
+EOF
+
+}
+
+
+# if no args are passed in print usage
+[ $# -eq 0 ] && usage
+
+# command line parsing logic
+while getopts ":h" opt; do
+  case $opt in
+    h | *)
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+mainwork $1 $2
+
