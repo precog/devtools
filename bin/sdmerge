@@ -20,26 +20,27 @@ IFS=$'\n\t'       # http://redsymbol.net/articles/unofficial-bash-strict-mode/
 #
 # Depends on: curl, json (http://trentm.com/json/#INSTALL-PROJECT-BUGS)
 
-DEPTH=100   # number of commits to fetch from upstream
+DEPTH=100           # number of commits to fetch from upstream
 
 mainwork() {
+  repo=${1:-}
+  pull_request=${2:-}
+  pr_url="https://api.github.com/repos/${repo}/pulls/${pull_request}"
+  labels_url="https://api.github.com/repos/${repo}/issues/${pull_request}/labels"
+  directory=$(mktemp -d "/tmp/slamdata-merge.XXXXXXXX")
 
-repo=${1:-}
-pull_request=${2:-}
-pr_url="https://api.github.com/repos/${repo}/pulls/${pull_request}"
-labels_url="https://api.github.com/repos/${repo}/issues/${pull_request}/labels"
-directory=$(mktemp -d "/tmp/slamdata-merge.XXXXXXXX")
+  # FIXME: removed -e around this command, don’t know why I had to
+  set +e
+  read -d '' merged title base_clone pr_clone submitter base_sha base_ref pr_ref changelog \
+    < <(curl -f -s $pr_url | json merged title base.repo.ssh_url head.repo.ssh_url user.login base.sha base.ref head.ref body -e 'this.body = this.body.replace(/\r\n/g, "{{[[ENDL]]}}")')
 
-# FIXME: removed -e around this command, don’t know why I had to
-set +e
-read -d '' merged title base_clone pr_clone submitter base_sha base_ref pr_ref changelog \
-     < <(curl -f -s $pr_url | json merged title base.repo.ssh_url head.repo.ssh_url user.login base.sha base.ref head.ref body -e 'this.body = this.body.replace(/\r\n/g, "{{[[ENDL]]}}")')
-labels=$(curl -f -s $labels_url | json -a name)
-set -e
+  labels=$(curl -f -s $labels_url | json -a name)
 
-changelog=${changelog//'{{[[ENDL]]}}'/$'\n'}
+  set -e
 
-if [[ "$merged" == "false" ]]; then
+  changelog=${changelog//'{{[[ENDL]]}}'/$'\n'}
+
+  if [[ "$merged" == "false" ]]; then
     tmp_branch=${submitter}-${pr_ref}
 
     git clone --depth $DEPTH $base_clone $directory
@@ -52,29 +53,29 @@ if [[ "$merged" == "false" ]]; then
     old_version=($(sed 's/.*"\(.*\)"/\1/' version.sbt | tr "." "\n"))
 
     if [[ $(echo ${labels[@]}) == *"version: breaking"* ]]; then
-        if [[ "${old_version[0]}" == "0" ]]; then
-            new_version="0.$((old_version[1] + 1)).0"
-        else
-            new_version="$((old_version[0] + 1)).0.0"
-        fi
+      if [[ "${old_version[0]}" == "0" ]]; then
+        new_version="0.$((old_version[1] + 1)).0"
+      else
+        new_version="$((old_version[0] + 1)).0.0"
+      fi
     elif [[ $(echo ${labels[@]}) == *"version: feature"* ]]; then
-        if [[ "${old_version[0]}" == "0" ]]; then
-            new_version="0.${old_version[1]}.$((old_version[2] + 1))"
-        else
-            new_version="${old_version[0]}.$((old_version[1] + 1)).0"
-        fi
+      if [[ "${old_version[0]}" == "0" ]]; then
+        new_version="0.${old_version[1]}.$((old_version[2] + 1))"
+      else
+        new_version="${old_version[0]}.$((old_version[1] + 1)).0"
+      fi
     elif [[ $(echo ${labels[@]}) == *"version: revision"* ]]; then
-        new_version="${old_version[0]}.${old_version[1]}.$((old_version[2] + 1))"
+      new_version="${old_version[0]}.${old_version[1]}.$((old_version[2] + 1))"
     elif [[ $(echo ${labels[@]}) == *"version: release"* ]]; then
       if [[ "${old_version[0]}" == "0" ]]; then
-          new_version="1.0.0"
+        new_version="1.0.0"
       else
-          echo "error: Current version (${old_version[0]}.${old_version[1]}.${old_version[2]}) must be < 1.0.0 to release."
-          exit 1
+        echo "error: Current version (${old_version[0]}.${old_version[1]}.${old_version[2]}) must be < 1.0.0 to release."
+        exit 1
       fi
     else
-        echo "error: Missing a semantic version label on the PR."
-        exit 1
+      echo "error: Missing a semantic version label on the PR."
+      exit 1
     fi
 
     echo "version in ThisBuild := \"${new_version}\"" > version.sbt
@@ -87,16 +88,14 @@ if [[ "$merged" == "false" ]]; then
 
     echo "success: ${repo}#${pull_request} has version ${new_version} in ${base_ref}"
     exit 0
-else
+  else
     echo "error: ${repo}#${pull_request} has already been merged"
     exit 1
-fi
-
+  fi
 }
 
 usage() {
-
-cat << EOF
+  cat << EOF
 usage: $0 [-h] <REPO-NAME> <PR-NUMBER>
 
 Merge a cloned repo to REPO-NAME with PR-NUMBER. Merge depends on json located
@@ -105,16 +104,14 @@ Github keys should be exchanged before using $0. Instructions can be found here:
 https://help.github.com/articles/adding-a-new-ssh-key-to-your-github-account.
 Lastly, ensure PR has a version label assigned to it.
 
-  -h            help (also trigged with no parameters): display this help and exit
-  <REPO-NAME>   the repo name, for example: quasar-analytics/quasar
-  <PR-NUMBER>   the pull request number: 2030
+-h            help (also trigged with no parameters): display this help and exit
+<REPO-NAME>   the repo name, for example: quasar-analytics/quasar
+<PR-NUMBER>   the pull request number: 2030
 
 Example: sdmerge quasar-analytics/quasar 2030
 
 EOF
-
 }
-
 
 # if no args are passed in print usage
 [ $# -eq 0 ] && usage
@@ -130,4 +127,3 @@ while getopts ":h" opt; do
 done
 
 mainwork $1 $2
-
