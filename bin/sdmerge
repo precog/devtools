@@ -104,7 +104,7 @@ Lastly, ensure PR has a version label assigned to it.
   <REPO-NAME>   the repo name, for example: quasar-analytics/quasar
   <PR-NUMBER>   the pull request number: 2030
 
-Example: merge quasar-analytics/quasar 2030
+Example: sdmerge quasar-analytics/quasar 2030
 
 EOF
 
