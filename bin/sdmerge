@@ -3,8 +3,11 @@
 set -euo pipefail # STRICT MODE
 IFS=$'\n\t'       # http://redsymbol.net/articles/unofficial-bash-strict-mode/
 
-# Takes two arguments – a GitHub repository name and a PR number
-# It ensures the PR is unmerged, fast-forwardable, and has a one of the
+# Takes one or two arguments – an optional GitHub repository name and a PR number.
+# If the repository name is unspecified, it will be inferred (if possible) from
+# the `upstream` remote of the git repository in the current working directory.
+#
+# This script ensures the PR is unmerged and has a one of the
 # “version:” GitHub labels applied to it (the name is used to determine which
 # version component to increment).
 #
