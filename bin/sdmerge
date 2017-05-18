@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+
+set -euo pipefail # STRICT MODE
+IFS=$'\n\t'       # http://redsymbol.net/articles/unofficial-bash-strict-mode/
+
+# Takes one or two arguments – an optional GitHub repository name and a PR number.
+# If the repository name is unspecified, it will be inferred (if possible) from
+# the `upstream` remote of the git repository in the current working directory.
+#
+# This script ensures the PR is unmerged and has a one of the
+# “version:” GitHub labels applied to it (the name is used to determine which
+# version component to increment).
+#
+# Pre-1.0 projects are supported (i.e. those with a version of 0.x.y) and
+# breaking changes will result in the minor version being incremented and any
+# other change will increment the patch version.
+#
+# When the pre-1.0 API has reached stability and is ready to release, use the
+# “version: release” label, which will transition the version to 1.0.0.
+#
+# It increments the version, copies the PR title and description to the merge
+# commit, and merges into master.
+#
+# Depends on: curl, json (http://trentm.com/json/#INSTALL-PROJECT-BUGS)
+
+UPSTREAM=upstream   # the default upstream remote name (used if only one argument is specified)
+DEPTH=100           # number of commits to fetch from upstream
+
+mainwork() {
+  if [[ $# -eq 2 ]]; then
+    repo=${1:-}
+    pull_request=${2:-}
+  else
+    pull_request=${1:-}
+
+    set +e
+    repo="$(git remote -v | grep $UPSTREAM | grep fetch | cut -f2 | cut -d ' ' -f1 | sed 's/git@github.com://' | sed 's|https://github.com/||' | sed 's/.git//')"
+    set -e
+
+    if [[ "$repo" == "" ]]; then
+      echo "error: unable to determine current working repository (do you have a remote named '$UPSTREAM'?)"
+      echo 'error: please specify both arguments, rather than just the PR number'
+      exit 1
+    fi
+  fi
+
+  pr_url="https://api.github.com/repos/${repo}/pulls/${pull_request}"
+  labels_url="https://api.github.com/repos/${repo}/issues/${pull_request}/labels"
+  directory=$(mktemp -d "/tmp/slamdata-merge.XXXXXXXX")
+
+  # FIXME: removed -e around this command, don’t know why I had to
+  set +e
+  read -d '' merged title base_clone pr_clone submitter base_sha base_ref pr_ref changelog \
+    < <(curl -f -s $pr_url | json merged title base.repo.ssh_url head.repo.ssh_url user.login base.sha base.ref head.ref body -e 'this.body = this.body.replace(/\r\n/g, "{{[[ENDL]]}}")')
+
+  labels=$(curl -f -s $labels_url | json -a name)
+
+  set -e
+
+  changelog=${changelog//'{{[[ENDL]]}}'/$'\n'}
+
+  if [[ "$merged" == "false" ]]; then
+    tmp_branch=${submitter}-${pr_ref}
+
+    git clone --depth $DEPTH $base_clone $directory
+
+    cd $directory
+    git fetch origin pull/$pull_request/head:$tmp_branch
+    git checkout $base_ref
+    git merge --no-ff --no-edit $tmp_branch
+
+    old_version=($(sed 's/.*"\(.*\)"/\1/' version.sbt | tr "." "\n"))
+
+    if [[ $(echo ${labels[@]}) == *"version: breaking"* ]]; then
+      if [[ "${old_version[0]}" == "0" ]]; then
+        new_version="0.$((old_version[1] + 1)).0"
+      else
+        new_version="$((old_version[0] + 1)).0.0"
+      fi
+    elif [[ $(echo ${labels[@]}) == *"version: feature"* ]]; then
+      if [[ "${old_version[0]}" == "0" ]]; then
+        new_version="0.${old_version[1]}.$((old_version[2] + 1))"
+      else
+        new_version="${old_version[0]}.$((old_version[1] + 1)).0"
+      fi
+    elif [[ $(echo ${labels[@]}) == *"version: revision"* ]]; then
+      new_version="${old_version[0]}.${old_version[1]}.$((old_version[2] + 1))"
+    elif [[ $(echo ${labels[@]}) == *"version: release"* ]]; then
+      if [[ "${old_version[0]}" == "0" ]]; then
+        new_version="1.0.0"
+      else
+        echo "error: Current version (${old_version[0]}.${old_version[1]}.${old_version[2]}) must be < 1.0.0 to release."
+        exit 1
+      fi
+    else
+      echo "error: Missing a semantic version label on the PR."
+      exit 1
+    fi
+
+    echo "version in ThisBuild := \"${new_version}\"" > version.sbt
+
+    git commit -a --amend -m "$new_version: $title" -m "(Merge branch '$tmp_branch')" -m "$changelog"
+    git push origin $base_ref
+
+    cd /tmp
+    rm -rf $directory
+
+    echo "success: ${repo}#${pull_request} has version ${new_version} in ${base_ref}"
+    exit 0
+  else
+    echo "error: ${repo}#${pull_request} has already been merged"
+    exit 1
+  fi
+}
+
+usage() {
+  cat << EOF
+usage: $0 [-h] [REPO-NAME] PR-NUMBER
+
+Merge a cloned repo to REPO-NAME with PR-NUMBER. Merge depends on json located
+here: http://trentm.com/json/ which can be installed using: sudo npm install -g json.
+Github keys should be exchanged before using $0. Instructions can be found here:
+https://help.github.com/articles/adding-a-new-ssh-key-to-your-github-account.
+Lastly, ensure PR has a version label assigned to it.
+
+-h            help (also trigged with no parameters): display this help and exit
+<REPO-NAME>   the repo name, for example: quasar-analytics/quasar
+<PR-NUMBER>   the pull request number: 2030
+
+Example: sdmerge quasar-analytics/quasar 2030
+
+EOF
+}
+
+# if no args are passed in print usage
+[ $# -eq 0 ] && usage
+
+# command line parsing logic
+while getopts ":h" opt; do
+  case $opt in
+    h | *)
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+mainwork $*
