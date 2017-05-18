@@ -20,11 +20,27 @@ IFS=$'\n\t'       # http://redsymbol.net/articles/unofficial-bash-strict-mode/
 #
 # Depends on: curl, json (http://trentm.com/json/#INSTALL-PROJECT-BUGS)
 
+UPSTREAM=upstream   # the default upstream remote name (used if only one argument is specified)
 DEPTH=100           # number of commits to fetch from upstream
 
 mainwork() {
-  repo=${1:-}
-  pull_request=${2:-}
+  if [[ $# -eq 2 ]]; then
+    repo=${1:-}
+    pull_request=${2:-}
+  else
+    pull_request=${1:-}
+
+    set +e
+    repo="$(git remote -v | grep $UPSTREAM | grep fetch | cut -f2 | cut -d ' ' -f1 | sed 's/git@github.com://' | sed 's|https://github.com/||' | sed 's/.git//')"
+    set -e
+
+    if [[ "$repo" == "" ]]; then
+      echo "error: unable to determine current working repository (do you have a remote named '$UPSTREAM'?)"
+      echo 'error: please specify both arguments, rather than just the PR number'
+      exit 1
+    fi
+  fi
+
   pr_url="https://api.github.com/repos/${repo}/pulls/${pull_request}"
   labels_url="https://api.github.com/repos/${repo}/issues/${pull_request}/labels"
   directory=$(mktemp -d "/tmp/slamdata-merge.XXXXXXXX")
@@ -96,7 +112,7 @@ mainwork() {
 
 usage() {
   cat << EOF
-usage: $0 [-h] <REPO-NAME> <PR-NUMBER>
+usage: $0 [-h] [REPO-NAME] PR-NUMBER
 
 Merge a cloned repo to REPO-NAME with PR-NUMBER. Merge depends on json located
 here: http://trentm.com/json/ which can be installed using: sudo npm install -g json.
@@ -126,4 +142,4 @@ while getopts ":h" opt; do
   esac
 done
 
-mainwork $1 $2
+mainwork $*
