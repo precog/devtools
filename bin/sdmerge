@@ -20,6 +20,7 @@ IFS=$'\n\t'       # http://redsymbol.net/articles/unofficial-bash-strict-mode/
 #
 # Depends on: curl, json (http://trentm.com/json/#INSTALL-PROJECT-BUGS)
 
+DEPTH=100   # number of commits to fetch from upstream
 
 mainwork() {
 
@@ -41,12 +42,12 @@ changelog=${changelog//'{{[[ENDL]]}}'/$'\n'}
 if [[ "$merged" == "false" ]]; then
     tmp_branch=${submitter}-${pr_ref}
 
-    git clone $base_clone $directory
+    git clone --depth $DEPTH $base_clone $directory
+
     cd $directory
-    git checkout -b $tmp_branch $base_sha
-    git pull --ff-only $pr_clone $pr_ref
+    git fetch origin pull/$pull_request/head:$tmp_branch
     git checkout $base_ref
-    git merge --ff-only --no-ff --no-edit $tmp_branch
+    git merge --no-ff --no-edit $tmp_branch
 
     old_version=($(sed 's/.*"\(.*\)"/\1/' version.sbt | tr "." "\n"))
 
@@ -80,9 +81,12 @@ if [[ "$merged" == "false" ]]; then
 
     git commit -a --amend -m "$new_version: $title" -m "(Merge branch '$tmp_branch')" -m "$changelog"
     git push origin $base_ref
+
+    cd /tmp
     rm -rf $directory
 
     echo "success: ${repo}#${pull_request} has version ${new_version} in ${base_ref}"
+    exit 0
 else
     echo "error: ${repo}#${pull_request} has already been merged"
     exit 1
@@ -93,7 +97,8 @@ fi
 usage() {
 
 cat << EOF
-Usage: $0 [-h] <REPO-NAME> <PR-NUMBER>
+usage: $0 [-h] <REPO-NAME> <PR-NUMBER>
+
 Merge a cloned repo to REPO-NAME with PR-NUMBER. Merge depends on json located
 here: http://trentm.com/json/ which can be installed using: sudo npm install -g json.
 Github keys should be exchanged before using $0. Instructions can be found here:
