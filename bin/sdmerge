@@ -7,6 +7,7 @@ import httplib
 import json
 import os
 import shutil
+from collections import OrderedDict
 
 # Takes one or two arguments - an optional GitHub repository name and a PR number.
 # If the repository name is unspecified, it will be inferred (if possible) from
@@ -108,13 +109,12 @@ def save_sbt_version(version):
 
 def save_npm_version(version):
     with open("package.json") as file:
-        content = file.read()
+        content = json.load(file, object_pairs_hook=OrderedDict)
 
-    # sadly parsing file as json, replacing the value and saving it back reorders everything, doing a big mess
-    new_content = re.sub("(?<=\"version\": \").+?(?=\")", "v" + version, content)
+    content["version"] = "v" + version
 
     with open("package.json", "w") as file:
-        file.write(new_content)
+        json.dump(content, file, indent=2, separators=(',', ': '))
 
 
 def resolve_version_file_type():
