@@ -3,7 +3,7 @@ import sys
 import subprocess
 import re
 import tempfile
-import httplib
+import http.client
 import json
 import os
 import shutil
@@ -33,7 +33,7 @@ DEPTH = 100            # number of commits to fetch from upstream
 
 
 def help():
-    print """usage: {0} [-h] [REPO-NAME] PR-NUMBER
+    print("""usage: {0} [-h] [REPO-NAME] PR-NUMBER
 
 Merge a cloned repo to REPO-NAME with PR-NUMBER. Github keys should be exchanged before using {0}. 
 Instructions can be found here: https://help.github.com/articles/adding-a-new-ssh-key-to-your-github-account.
@@ -44,7 +44,7 @@ Lastly, ensure PR has a version label assigned to it.
 <REPO-NAME>   the repo name, for example: quasar-analytics/quasar
 <PR-NUMBER>   the pull request number: 2030
 
-Example: sdmerge quasar-analytics/quasar 2030""".format(sys.argv[0])
+Example: sdmerge quasar-analytics/quasar 2030""".format(sys.argv[0]))
     exit(1)
 
 
@@ -53,14 +53,14 @@ def infer_repo_slug():
     upstream_fetch_regex = "^" + re.escape(UPSTREAM) + r"\t(?:git@github\.com:|https://github\.com/)(.+?)(?:.git)? \(fetch\)$"
     match = re.compile(upstream_fetch_regex, re.MULTILINE).search(out)
     if match is None:
-        print "error: unable to determine current working repository (do you have a remote named '%s'?)" % UPSTREAM
+        print("error: unable to determine current working repository (do you have a remote named '%s'?)" % UPSTREAM)
         exit(1)
     else:
         return match.group(1)
 
 
 def call_github_api(url, token):
-    conn = httplib.HTTPSConnection("api.github.com")
+    conn = http.client.HTTPSConnection("api.github.com")
 
     headers = {"User-Agent": "sdmerge"}  # user agent is required by github api
     if token is not None:
@@ -70,20 +70,20 @@ def call_github_api(url, token):
     response = conn.getresponse()
     if response.status != 200:
         if response.status == 403 and token is None:
-            print "error: set GITHUB_TOKEN env variable to access private repositories"
+            print("error: set GITHUB_TOKEN env variable to access private repositories")
         elif response.status == 404:
-            print "error: pull request with this number does not exist"
+            print("error: pull request with this number does not exist")
             if token is None:
-                print "error: if you are trying to access private repository make sure that GITHUB_TOKEN is set"
+                print("error: if you are trying to access private repository make sure that GITHUB_TOKEN is set")
         else:
-            print "error: invalid response: ", response.status, response.reason
-            print response.read()
+            print("error: invalid response: ", response.status, response.reason)
+            print(response.read())
         conn.close()
         exit(1)
     else:
         raw_data = response.read()
         conn.close()
-        return json.loads(raw_data)
+        return json.loads(raw_data.decode('utf-8'))
 
 
 def get_pr_metadata():
@@ -123,7 +123,7 @@ def resolve_version_file_type():
     elif os.path.exists("package.json"):
         return read_npm_version, save_npm_version
     else:
-        print "error: unable to determine project version file. Expected to find one of those: version.sbt, package.json"
+        print("error: unable to determine project version file. Expected to find one of those: version.sbt, package.json")
         exit(1)
 
 
@@ -141,7 +141,7 @@ def bump_version_file():
         return v[major] == 0
 
     def parse_version(s):
-        return map(int, s.split("."))
+        return list(map(int, s.split(".")))
 
     def stringify_version(v):
         return ".".join(map(str, v))
@@ -165,10 +165,10 @@ def bump_version_file():
         if is_unreleased(version):
             version = [1, 0, 0]
         else:
-            print "error: current version (%s) must be < 1.0.0 to release" % stringify_version(version)
+            print("error: current version (%s) must be < 1.0.0 to release" % stringify_version(version))
             exit(1)
     else:
-        print "error: Missing a semantic version label on the PR."
+        print("error: Missing a semantic version label on the PR.")
         exit(1)
     new_version_str = stringify_version(version)
     save_version(new_version_str)
@@ -191,12 +191,12 @@ pr_branch = pr_data["head"]["ref"]
 pr_base_branch = pr_data["base"]["ref"]
 pr_base_repo = pr_data["base"]["repo"]["ssh_url"]
 pr_title = pr_data["title"]
-pr_labels = map(lambda x: x["name"], pr_data["labels"])
+pr_labels = [x["name"] for x in pr_data["labels"]]
 pr_changelog = pr_data["body"].replace("\r\n", "\n")
 pr_is_merged = pr_data["merged"]
 
 if pr_is_merged:
-    print "error: %s#%s has already been merged" % (repo_slug, pull_request_number)
+    print("error: %s#%s has already been merged" % (repo_slug, pull_request_number))
     exit(1)
 
 
@@ -225,4 +225,4 @@ try:
 finally:
     shutil.rmtree(clone_directory)
 
-print "success: %s#%s has version %s in %s" % (repo_slug, pull_request_number, new_version, pr_base_branch)
+print("success: %s#%s has version %s in %s" % (repo_slug, pull_request_number, new_version, pr_base_branch))

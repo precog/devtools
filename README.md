@@ -10,7 +10,7 @@ How to get up and running with `sdmerge`.
 → git clone https://github.com/slamdata/devtools.git
 ```
 
-2. The `sdmerge` script depends on python 2.7.
+2. The `sdmerge` script depends on python 3.
 
 3. You also need to exchange ssh keys with github. This requires two steps:
   * Generate ssh [keys](https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/)
