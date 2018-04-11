@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import sys
 import subprocess
 import re
@@ -35,7 +35,7 @@ DEPTH = 100            # number of commits to fetch from upstream
 def help():
     print("""usage: {0} [-h] [REPO-NAME] PR-NUMBER
 
-Merge a cloned repo to REPO-NAME with PR-NUMBER. Github keys should be exchanged before using {0}. 
+Merge a cloned repo to REPO-NAME with PR-NUMBER. Github keys should be exchanged before using {0}.
 Instructions can be found here: https://help.github.com/articles/adding-a-new-ssh-key-to-your-github-account.
 To fetch metadata of private repositories provide github api token through GITHUB_TOKEN env variable.
 Lastly, ensure PR has a version label assigned to it.
