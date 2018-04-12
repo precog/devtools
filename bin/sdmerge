@@ -51,7 +51,7 @@ Example: sdmerge quasar-analytics/quasar 2030""".format(sys.argv[0]))
 def infer_repo_slug():
     out = subprocess.check_output(["git", "remote", "-v"])
     upstream_fetch_regex = "^" + re.escape(UPSTREAM) + r"\t(?:git@github\.com:|https://github\.com/)(.+?)(?:.git)? \(fetch\)$"
-    match = re.compile(upstream_fetch_regex, re.MULTILINE).search(out)
+    match = re.compile(upstream_fetch_regex, re.MULTILINE).search(out.decode('utf-8'))
     if match is None:
         print("error: unable to determine current working repository (do you have a remote named '%s'?)" % UPSTREAM)
         exit(1)
