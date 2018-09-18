@@ -101,6 +101,10 @@ def read_npm_version():
     with open("package.json") as file:
         return json.load(file)["version"].replace("v", "")
 
+def read_installer_version():
+    with open("release-version.json") as file:
+        return json.load(file)["version"]
+
 
 def save_sbt_version(version):
     with open("version.sbt", "w") as file:
@@ -116,14 +120,25 @@ def save_npm_version(version):
     with open("package.json", "w") as file:
         json.dump(content, file, indent=2, separators=(',', ': '))
 
+def save_installer_version(version):
+    with open("release-version.json") as file:
+        content = json.load(file, object_pairs_hook=OrderedDict)
+
+    content["version"] = version
+
+    with open("release-version.json", "w") as file:
+        json.dump(content, file, indent=2, separators=(',', ': '))
+
 
 def resolve_version_file_type():
     if os.path.exists("version.sbt"):
         return read_sbt_version, save_sbt_version
     elif os.path.exists("package.json"):
         return read_npm_version, save_npm_version
+    elif os.path.exists("release-version.json"):
+        return read_installer_version, save_installer_version
     else:
-        print("error: unable to determine project version file. Expected to find one of those: version.sbt, package.json")
+        print("error: unable to determine project version file. Expected to find one of those: version.sbt, package.json, release-version.json")
         exit(1)
 
 
