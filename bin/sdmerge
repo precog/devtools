@@ -231,7 +231,6 @@ try:
     subprocess.check_call([
         "git", "commit", "-a", "--amend",
         "-m", "%s: %s" % (new_version, pr_title),
-        "-m", "(Merge branch '%s')" % temporary_branch,
         "-m", pr_changelog
     ])
 
