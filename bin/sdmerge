@@ -223,7 +223,10 @@ try:
     subprocess.check_call(["git", "clone", "--depth", str(DEPTH), pr_base_repo, clone_directory])
     os.chdir(clone_directory)
     subprocess.check_call(["git", "fetch", "origin", "pull/%s/head:%s" % (pull_request_number, temporary_branch)])
-    subprocess.check_call(["git", "fetch", "origin", "%s:%s" % (pr_base_branch, pr_base_branch)])
+
+    if pr_base_branch != "master":
+        subprocess.check_call(["git", "fetch", "origin", "%s:%s" % (pr_base_branch, pr_base_branch)])
+
     subprocess.check_call(["git", "checkout", pr_base_branch])
     subprocess.check_call(["git", "merge", "--no-ff", "--no-edit", temporary_branch])
 
