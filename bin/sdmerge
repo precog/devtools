@@ -190,12 +190,15 @@ def bump_version_file():
     return new_version_str
 
 
+in_local = False
+
 if len(sys.argv) == 3:
     repo_slug = sys.argv[1]
     pull_request_number = sys.argv[2]
 elif len(sys.argv) == 2:
     repo_slug = infer_repo_slug()
     pull_request_number = sys.argv[1]
+    in_local = True
 else:
     help()
 
@@ -220,8 +223,17 @@ clone_directory = tempfile.mkdtemp(prefix="/tmp/slamdata-merge.")
 try:
     # merge PR
     temporary_branch = pr_submitter + "-" + pr_branch
-    subprocess.check_call(["git", "clone", "--depth", str(DEPTH), pr_base_repo, clone_directory])
-    os.chdir(clone_directory)
+
+    if in_local:
+        subprocess.check_call(["git", "clone", os.getcwd(), clone_directory])
+        os.chdir(clone_directory)
+        subprocess.check_call(["git", "remote", "rm", "origin"])
+        subprocess.check_call(["git", "remote", "add", "origin", pr_base_repo])
+        subprocess.check_call(["git", "fetch", "--depth", str(DEPTH), "origin"])
+    else:
+        subprocess.check_call(["git", "clone", "--depth", str(DEPTH), pr_base_repo, clone_directory])
+        os.chdir(clone_directory)
+
     subprocess.check_call(["git", "fetch", "origin", "pull/%s/head:%s" % (pull_request_number, temporary_branch)])
 
     if pr_base_branch != "master":
