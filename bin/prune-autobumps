@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -euo pipefail # STRICT MODE
+IFS=$'\n\t'       # http://redsymbol.net/articles/unofficial-bash-strict-mode/
+
+echo -e '\033[1;33mWARNING: This will remove ALL autobump branches, including those which are unmerged!\033[0m'
+echo -n 'Are you sure you wish to proceed? [yN] '
+read prompt
+
+if [ "$prompt" != "y" ]; then
+  exit -1
+fi
+
+git fetch upstream
+git remote prune upstream
+
+for b in $(git branch -a | grep upstream | grep version-bump); do
+  git push upstream :$(echo $b | sed 's|remotes/upstream/||' | tr -d '[:space:]')
+done
