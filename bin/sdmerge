@@ -125,6 +125,16 @@ def save_installer_version(version):
         content = json.load(file, object_pairs_hook=OrderedDict)
 
     content["version"] = version
+    content["marketplace"] = False
+
+    with open("release-version.json", "w") as file:
+        json.dump(content, file, indent=2, separators=(',', ': '))
+
+def write_installer_aws_flag():
+    with open("release-version.json") as file:
+        content = json.load(file, object_pairs_hook=OrderedDict)
+
+    content["marketplace"] = True
 
     with open("release-version.json", "w") as file:
         json.dump(content, file, indent=2, separators=(',', ': '))
@@ -185,8 +195,13 @@ def bump_version_file():
     else:
         print("error: Missing a semantic version label on the PR.")
         exit(1)
+
     new_version_str = stringify_version(version)
     save_version(new_version_str)
+
+    if "marketplace" in pr_labels:
+        write_installer_aws_flag()
+
     return new_version_str
 
 
