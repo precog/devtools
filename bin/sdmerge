@@ -256,7 +256,7 @@ try:
         subprocess.check_call(["git", "fetch", "origin", "%s:%s" % (pr_base_branch, pr_base_branch)])
 
     subprocess.check_call(["git", "checkout", pr_base_branch])
-    subprocess.check_call(["git", "merge", "--ff-only", "origin/%s" % pr_base_branch])
+    subprocess.check_call(["git", "reset", "--hard", "origin/%s" % pr_base_branch])
 
     subprocess.check_call(["git", "merge", "--no-ff", "--no-edit", temporary_branch])
 
