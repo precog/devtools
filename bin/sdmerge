@@ -233,6 +233,10 @@ if pr_is_merged:
     print("error: %s#%s has already been merged" % (repo_slug, pull_request_number))
     exit(1)
 
+if ":stop_sign:" in pr_labels:
+    print("error: PR %s#%s is marked as 🛑 and cannot be merged" % (repo_slug, pull_request_number))
+    exit(1)
+
 
 clone_directory = tempfile.mkdtemp(prefix="/tmp/slamdata-merge.")
 
