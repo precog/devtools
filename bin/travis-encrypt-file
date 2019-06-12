@@ -1,0 +1,94 @@
+#!/bin/bash
+
+set -euo pipefail # STRICT MODE
+IFS=$'\n\t'       # http://redsymbol.net/articles/unofficial-bash-strict-mode/
+
+random-hex() {
+  head -c 10 /dev/urandom | xxd -p
+}
+
+NC='\033[0m'
+
+plain() {
+  echo -en $* 1>&2
+}
+
+blue() {
+  echo -en "\033[0;34m$*${NC}" 1>&2
+}
+
+yellow() {
+  echo -en "\033[0;33m$*${NC}" 1>&2
+}
+
+red() {
+  echo -en "\033[0;31m$*${NC}" 1>&2
+}
+
+gray() {
+  echo -en "\033[0;37m$*${NC}" 1>&2
+}
+
+nl() {
+  echo 1>&2
+}
+
+if ! git config travis.slug &>/dev/null; then
+  plain "Please define the "
+  yellow "travis.slug"
+  plain " value using "
+  yellow "git config"
+  plain " (or by running "
+  yellow "travis encrypt"
+  plain " on something).\nIt should be defined to be the repository owner/name (e.g. "
+  yellow "slamdata/devtools"
+  plain ")\n"
+
+  exit 1
+fi
+
+for f in "$@"; do
+  yellow "Encrypting $f...\n"
+
+  sha=$(openssl sha1 "$f" | egrep -o '[0-9a-f]+$')
+
+  key=$(random-hex)
+  iv=$(random-hex)
+
+  seed=$(random-hex | head -c 10)
+
+  key_name="key_${seed}"
+  iv_name="iv_${seed}"
+
+  key_enc="$(travis encrypt --com --no-interactive $key_name=$key)"
+  iv_enc="$(travis encrypt --com --no-interactive $iv_name=$iv)"
+
+  # openssl aes-256-cbc -d -in message.enc -out plain-text.txt
+  openssl aes-256-cbc -K $key -iv $iv -in "$f" -out "$f.enc"
+
+  plain "Please add the following to your "
+  yellow ".travis.yml"
+  plain " file:\n"
+
+  blue "env:\n  global:\n"
+  plain "    "
+  gray "# key for $f (\$$key_name)\n"
+  plain "    - "
+  blue "secure: "
+  red "$key_enc\n"
+  plain "    "
+  gray "# initialization vector for $f (\$$iv_name)\n"
+  plain "    - "
+  blue "secure: "
+  red "$iv_enc\n"
+
+  echo 1>&2
+
+  blue "before_install:\n"
+  plain "  - "
+  red "'openssl aes-256-cbc -K \$$key_name -iv \$$iv_name -in \"$f.enc\" -out \"$f\" -d'\n"
+  plain "  - "
+  red "'[ \$(openssl sha1 \"$f\" | egrep -o \"[0-9a-f]+\\$\") != $sha ] && echo \"File $f failed to decrypt\" && exit 1'\n"
+
+  nl
+done
