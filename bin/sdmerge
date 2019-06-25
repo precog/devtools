@@ -7,7 +7,10 @@ import http.client
 import json
 import os
 import shutil
+import base64
+from builtins import str
 from collections import OrderedDict
+from subprocess import CalledProcessError
 
 # Takes one or two arguments - an optional GitHub repository name and a PR number.
 # If the repository name is unspecified, it will be inferred (if possible) from
@@ -204,6 +207,17 @@ def bump_version_file():
 
     return new_version_str
 
+def slugify(value):
+    """
+    Normalizes string, converts to lowercase, removes non-alpha characters,
+    and converts spaces to hyphens.
+    """
+    import unicodedata
+    value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
+    value = str(re.sub('[^\w\s-]', '', value).strip().lower())
+    value = str(re.sub('[-\s]+', '-', value))
+    return value
+
 
 in_local = False
 
@@ -242,8 +256,6 @@ clone_directory = tempfile.mkdtemp(prefix="/tmp/slamdata-merge.")
 
 try:
     # merge PR
-    temporary_branch = pr_submitter + "-" + pr_branch
-
     if in_local:
         subprocess.check_call(["git", "clone", os.getcwd(), clone_directory])
         os.chdir(clone_directory)
@@ -254,7 +266,21 @@ try:
         subprocess.check_call(["git", "clone", "--depth", str(DEPTH), pr_base_repo, clone_directory])
         os.chdir(clone_directory)
 
-    subprocess.check_call(["git", "fetch", "origin", "pull/%s/head:%s" % (pull_request_number, temporary_branch)])
+    temporary_branch = slugify(pr_submitter + "-" + pr_branch)
+    while True:
+        try:
+            subprocess.check_call(["git", "fetch", "origin", "pull/%s/head:%s" % (pull_request_number, temporary_branch)])
+        except CalledProcessError:
+            # Safe encoding
+            safe_branch = base64.urlsafe_b64encode((pr_submitter + "-" + pr_branch).encode()).decode('ascii')
+            if safe_branch == temporary_branch:
+                raise
+            else:
+                print("slugify failed, using base64 encoding\nOriginal: %s\nSlugify: %s\nBase64: %s"
+                        % (pr_submitter + "-" + pr_branch, temporary_branch, safe_branch))
+            temporary_branch = safe_branch
+            continue
+        break
 
     if pr_base_branch != "master":
         subprocess.check_call(["git", "fetch", "origin", "%s:%s" % (pr_base_branch, pr_base_branch)])
