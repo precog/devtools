@@ -10,7 +10,7 @@ random-hex() {
 NC='\033[0m'
 
 plain() {
-  echo -en $* 1>&2
+  echo -en "$*" 1>&2
 }
 
 blue() {
@@ -50,7 +50,7 @@ fi
 for f in "$@"; do
   yellow "Encrypting $f...\n"
 
-  sha=$(openssl sha1 "$f" | egrep -o '[0-9a-f]+$')
+  sha=$(openssl sha1 "$f" | grep -Eo '[0-9a-f]+$')
 
   key=$(random-hex)
   iv=$(random-hex)
@@ -60,11 +60,11 @@ for f in "$@"; do
   key_name="key_${seed}"
   iv_name="iv_${seed}"
 
-  key_enc="$(travis encrypt --com --no-interactive $key_name=$key)"
-  iv_enc="$(travis encrypt --com --no-interactive $iv_name=$iv)"
+  key_enc="$(travis encrypt --com --no-interactive "$key_name=$key")"
+  iv_enc="$(travis encrypt --com --no-interactive "$iv_name=$iv")"
 
   # openssl aes-256-cbc -d -in message.enc -out plain-text.txt
-  openssl aes-256-cbc -K $key -iv $iv -in "$f" -out "$f.enc"
+  openssl aes-256-cbc -K "$key" -iv "$iv" -in "$f" -out "$f.enc"
 
   plain "Please add the following to your "
   yellow ".travis.yml"
