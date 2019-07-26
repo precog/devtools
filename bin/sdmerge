@@ -240,7 +240,12 @@ pr_base_name = pr_data["base"]["repo"]["full_name"]
 pr_base_repo = "https://%s@github.com/%s.git" % (os.environ.get("GITHUB_TOKEN"), pr_base_name)
 pr_title = pr_data["title"]
 pr_labels = [x["name"] for x in pr_data["labels"]]
-pr_changelog = pr_data["body"].replace("\r\n", "\n")
+
+if pr_data["body"] != None:
+    pr_changelog = pr_data["body"].replace("\r\n", "\n")
+else:
+    pr_changelog = ""
+
 pr_is_merged = pr_data["merged"]
 
 if pr_is_merged:
