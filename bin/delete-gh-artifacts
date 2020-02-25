@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Customize those three lines with your repository and credentials:
-REPO=https://api.github.com/repos/$1/$2
+REPO=https://api.github.com/repos/$1
 
 # A shortcut to call GitHub API.
 ghapi() { curl --silent --location --user $GITHUB_ACTOR:$GITHUB_TOKEN "$@"; }
