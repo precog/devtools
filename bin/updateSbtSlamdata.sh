@@ -119,7 +119,7 @@ for name in "${MAPFILE[@]}"; do
             (
               hub clone --depth 1 "${repo}"
               cd "${name}"
-              git checkout -b build/version-update-sbt-slamdata
+              git checkout -b build/version-bump-sbt-slamdata
               sed -Ei '' "s/addSbtPlugin\(\"com.slamdata\" *% *\"sbt-slamdata\" *% *\"[^\"]+\"\)/addSbtPlugin(\"com.slamdata\" % \"sbt-slamdata\" % \"${TARGET}\")/g" project/plugins.sbt
               git add project/plugins.sbt
               git commit -m "Update sbt-slamdata to $TARGET"
