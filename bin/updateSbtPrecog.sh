@@ -2,7 +2,7 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-: "${ORG:=slamdata}"
+: "${ORG:=precog}"
 : "${RATELIMIT:=5}"
 : "${NOCOLOR=}"
 : "${DRY=0}"
@@ -107,7 +107,7 @@ for name in "${MAPFILE[@]}"; do
   FILE="$(searchPluginsSbt "${repo}")"
   if [[ -n $FILE ]]; then
     PLUGINS_SBT="$(getPluginsSbt "${repo}")"
-    HAS_SBT_SLAMDATA=$(try grep -q sbt-slamdata <<<"${PLUGINS_SBT}")
+    HAS_SBT_SLAMDATA=$(try grep -q sbt-precog <<<"${PLUGINS_SBT}")
     if [[ $HAS_SBT_SLAMDATA == 0 ]]; then
       echo "might need updating"
       # The "f && g || h" pattern is being used to silence errors, not as if-then-else
@@ -119,10 +119,10 @@ for name in "${MAPFILE[@]}"; do
             (
               hub clone --depth 1 "${repo}"
               cd "${name}"
-              git checkout -b build/version-bump-sbt-slamdata
-              sed -Ei '' "s/addSbtPlugin\(\"com.slamdata\" *% *\"sbt-slamdata\" *% *\"[^\"]+\"\)/addSbtPlugin(\"com.slamdata\" % \"sbt-slamdata\" % \"${TARGET}\")/g" project/plugins.sbt
+              git checkout -b build/version-bump-sbt-precog
+              sed -Ei '' "s/addSbtPlugin\(\"com.precog\" *% *\"sbt-precog\" *% *\"[^\"]+\"\)/addSbtPlugin(\"com.precog\" % \"sbt-precog\" % \"${TARGET}\")/g" project/plugins.sbt
               git add project/plugins.sbt
-              git commit -m "Update sbt-slamdata to $TARGET"
+              git commit -m "Update sbt-precog to $TARGET"
               if [[ $? == 0 ]]; then
                 if [[ $DRY == 0 ]]; then
                   hub pull-request --no-edit -p -l 'version: revision'
@@ -140,7 +140,7 @@ for name in "${MAPFILE[@]}"; do
           echo "PR: $(green)$(jq -r '._links.html.href' <<<"${PR}")$(reset)"
         fi || :
     else
-      echo "doesn't use sbt-slamdata"
+      echo "doesn't use sbt-precog"
     fi
   else
     echo "has no plugins.sbt file"

@@ -257,7 +257,7 @@ if ":stop_sign:" in pr_labels:
     exit(1)
 
 
-clone_directory = tempfile.mkdtemp(prefix="/tmp/slamdata-merge.")
+clone_directory = tempfile.mkdtemp(prefix="/tmp/precog-merge.")
 
 try:
     # merge PR

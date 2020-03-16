@@ -2,8 +2,8 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-: "${AUTHOR:=Daniel Sobral <dcsobral@slamdata.com>}"
-: "${ORG:=slamdata}"
+: "${AUTHOR:=Daniel Sobral <dcsobral@precog.com>}"
+: "${ORG:=precog}"
 : "${RATELIMIT:=5}"
 : "${NOCOLOR=}"
 
