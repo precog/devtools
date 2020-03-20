@@ -119,7 +119,7 @@ for name in "${MAPFILE[@]}"; do
             (
               hub clone --depth 1 "${repo}"
               cd "${name}"
-              git checkout -b build/version-bump-sbt-precog
+              git checkout -b build/version-bump-sbt-precog-$(date +%m%d%H%M%y)
               sed -Ei '' "s/addSbtPlugin\(\"com.precog\" *% *\"sbt-precog\" *% *\"[^\"]+\"\)/addSbtPlugin(\"com.precog\" % \"sbt-precog\" % \"${TARGET}\")/g" project/plugins.sbt
               git add project/plugins.sbt
               git commit -m "Update sbt-precog to $TARGET"
