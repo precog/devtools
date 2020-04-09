@@ -122,6 +122,12 @@ for name in "${MAPFILE[@]}"; do
               git checkout -b build/version-bump-sbt-precog-$(date +%m%d%H%M%y)
               sed -Ei '' "s/addSbtPlugin\(\"com.precog\" *% *\"sbt-precog\" *% *\"[^\"]+\"\)/addSbtPlugin(\"com.precog\" % \"sbt-precog\" % \"${TARGET}\")/g" project/plugins.sbt
               git add project/plugins.sbt
+
+              if [[ -f .github/workflows/ci.yml ]]; then
+                sbt githubWorkflowGenerate
+                git add .github/workflows
+              fi
+
               git commit -m "Update sbt-precog to $TARGET"
               if [[ $? == 0 ]]; then
                 if [[ $DRY == 0 ]]; then
