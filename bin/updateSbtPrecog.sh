@@ -125,7 +125,7 @@ for name in "${MAPFILE[@]}"; do
 
               if [[ -f .github/workflows/ci.yml ]]; then
                 sbt githubWorkflowGenerate
-                git add .github/workflows
+                git add .
               fi
 
               git commit -m "Update sbt-precog to $TARGET"
