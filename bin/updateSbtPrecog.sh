@@ -131,7 +131,15 @@ for name in "${MAPFILE[@]}"; do
               git commit -m "Update sbt-precog to $TARGET"
               if [[ $? == 0 ]]; then
                 if [[ $DRY == 0 ]]; then
-                  hub pull-request --no-edit -p -l 'version: revision'
+                  pr_id=$(hub pull-request --no-edit -p -d -l 'version: revision' | gsed -nr 's/.*\/([0-9]+)$/\1/p')
+                  node_id=$(hub api repos/$repo/pulls/$pr_id | jq .node_id)
+                  hub api graphql -F query='mutation MarkForReview($id: ID!) {
+                    markPullRequestReadyForReview(input: { pullRequestId: $id }) {
+                      pullRequest {
+                        isDraft
+                      }
+                    }
+                  }' -F id=$node_id
                 else
                   echo "DRY: hub pull-request --no-edit -p -l 'version: revision'"
                 fi
