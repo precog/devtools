@@ -124,7 +124,7 @@ for name in "${MAPFILE[@]}"; do
               git add project/plugins.sbt
 
               if [[ -f .github/workflows/ci.yml ]]; then
-                sbt githubWorkflowGenerate
+                sbt headerCreate githubWorkflowGenerate
                 git add .
               fi
 
