@@ -287,7 +287,7 @@ try:
             continue
         break
 
-    if pr_base_branch != "master":
+    if pr_base_branch != "master" and pr_base_branch != "main":
         subprocess.check_call(["git", "fetch", "origin", "%s:%s" % (pr_base_branch, pr_base_branch)])
 
     subprocess.check_call(["git", "checkout", pr_base_branch])
