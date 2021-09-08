@@ -111,7 +111,7 @@ def read_installer_version():
 
 def save_sbt_version(version):
     with open("version.sbt", "w") as file:
-        file.write("version in ThisBuild := \"%s\"" % version)
+        file.write("version in ThisBuild := \"%s\"\n" % version)
 
 
 def save_npm_version(version):
