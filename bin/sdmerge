@@ -97,7 +97,14 @@ def get_pr_metadata():
 
 def read_sbt_version():
     with open("version.sbt") as file:
-        return re.match(r"version in ThisBuild := \"(.+)\"", file.read()).group(1)
+        content = file.read()
+        match = re.match(r"ThisBuild / version := \"(.+)\"", content)
+
+        if match is None:
+            # Try the previous format
+            return re.match(r"version in ThisBuild := \"(.+)\"", content).group(1)
+        else:
+            return match.group(1)
 
 
 def read_npm_version():
@@ -111,7 +118,7 @@ def read_installer_version():
 
 def save_sbt_version(version):
     with open("version.sbt", "w") as file:
-        file.write("version in ThisBuild := \"%s\"\n" % version)
+        file.write("ThisBuild / version := \"%s\"\n" % version)
 
 
 def save_npm_version(version):
